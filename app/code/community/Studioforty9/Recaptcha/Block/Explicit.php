@@ -67,6 +67,11 @@ class Studioforty9_Recaptcha_Block_Explicit extends Mage_Core_Block_Template
         'uk_UA' => 'uk',
         'vi_VN' => 'vi'
     );
+    
+    /**
+     * @var
+     */
+    protected $_shouldCallScript = null;
 
     /**
      * Is the block allowed to display.
@@ -114,6 +119,17 @@ class Studioforty9_Recaptcha_Block_Explicit extends Mage_Core_Block_Template
     public function getType()
     {
         return $this->_getHelper()->getType();
+    }
+
+    /**
+     * Get the recaptcha invisible setting.
+     *
+     * @codeCoverageIgnore
+     * @return string
+     */
+    public function isInvisible()
+    {
+        return $this->_getHelper()->isInvisible();
     }
 
     /**
@@ -177,5 +193,50 @@ class Studioforty9_Recaptcha_Block_Explicit extends Mage_Core_Block_Template
     protected function _getHelper()
     {
         return Mage::helper('studioforty9_recaptcha');
+    }
+
+    /**
+     * Should we call the script again ?
+     *
+     * @return bool
+     */
+    public function shouldCallScript()
+    {
+        if (is_null($this->_shouldCallScript)) {
+            if (Mage::getSingleton('studioforty9_recaptcha/counter')->getCount()) {
+                $this->_shouldCallScript = false;
+            } else {
+                Mage::getSingleton('studioforty9_recaptcha/counter')->increase();
+                $this->_shouldCallScript = true;
+            }
+        }
+
+        return $this->_shouldCallScript;
+    }
+
+    /**
+     * Get the button selector for a specific route
+     *
+     * @param $currentRoute
+     * @return bool
+     */
+    public function getButtonSelector($currentRoute, $parentBlockName)
+    {
+        $buttonsSelectors = Mage::helper('core/unserializeArray')->unserialize($this->_getHelper()->getButtonsSelector());
+        if ($parentBlockName) {
+            foreach ($buttonsSelectors as $key => $buttonsSelector) {
+                if (array_key_exists('parent_block_name', $buttonsSelector)
+                    && $buttonsSelector['parent_block_name']
+                    && false !== strpos($parentBlockName, $buttonsSelector['parent_block_name'])) {
+                    return $buttonsSelector['buttons'];
+                }
+            }
+        }
+
+        foreach ($buttonsSelectors as $key => $buttonsSelector) {
+            if (false !== strpos($currentRoute, $buttonsSelector['routes'])) {
+                return $buttonsSelector['buttons'];
+            }
+        }
     }
 }
